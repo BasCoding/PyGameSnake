@@ -1,6 +1,7 @@
+import os
+import argparse
 import numpy as np
 import time
-import tensorflow as tf
 import pygame
 from pygamesnake.game.snake import Snake, Food
 from pygamesnake.machine_learning.grid import create_grid
@@ -100,7 +101,6 @@ def start_snake(model,model_name,snake,food):
 
 
 def test_model(model_name,input_size):
-    tf.compat.v1.reset_default_graph()
     model = neural_network_model(input_size)
     model.load(model_name)
     snake = Snake(SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight)
@@ -109,6 +109,10 @@ def test_model(model_name,input_size):
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='Test a trained snake model')
+    parser.add_argument('model_version', help='Name of the model version to test (e.g. trained_model_head_5)')
+    args = parser.parse_args()
 
     # Settings
     ScreenWide = 800
@@ -128,12 +132,8 @@ if __name__ == "__main__":
     if SnakeStartX % SnakeWide != 0 or SnakeStartY % SnakeHeight != 0:
         print('WARNING: Start position of snake is not aligned with grid')
 
-    training_data = np.load('training_data.npy', allow_pickle=True)
+    training_data = np.load(os.path.join('data', 'training_data_algorithm.npy'), allow_pickle=True)
     X = np.array([i[0] for i in training_data])
-    input_size = len(X[0])
+    input_size = X[0].size
 
-    model_v = ['trained_model_normal_7_125','trained_model_normal','trained_model_normal_3','trained_model_normal_5_250',
-               'trained_model_normal_7','trained_model_weighted','trained_model_weighted_3','trained_model_weighted_5_250',
-               'trained_model_weighted_7','trained_model_head_5_500','trained_model_head_7_250']
-    for model_name in model_v:
-        test_model(model_name,input_size)
+    test_model(args.model_version, input_size)

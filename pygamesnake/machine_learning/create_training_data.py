@@ -9,27 +9,39 @@ from pygamesnake.machine_learning.grid import create_grid
 ACTION_LABELS = ['UP', 'LEFT', 'RIGHT', 'DOWN', 'NONE']
 
 
-def direction_to_action(snake):
+def sample_weight(snake):
     """
     Purpose
-        Encode the snake's current direction as a training action vector,
-        using the same weighting scheme as the simple algorithm.
+        Importance weight of a sample; longer (more successful) snakes count
+        more heavily during training.
     Input
         snake, Class: Snake
     Output
-        action, list: one-hot (weighted) action matching ACTION_LABELS
+        weight, float
     """
-    weight = (snake.SnakeLength + 1) ** 0.5
+    return (snake.SnakeLength + 1) ** 0.5
+
+
+def direction_to_action(snake):
+    """
+    Purpose
+        Encode the snake's current direction as a one-hot action vector
+        matching ACTION_LABELS.
+    Input
+        snake, Class: Snake
+    Output
+        action, list: one-hot action matching ACTION_LABELS
+    """
     actions = {
-        'up':    [weight, 0, 0, 0, 0],
-        'left':  [0, weight, 0, 0, 0],
-        'right': [0, 0, weight, 0, 0],
-        'down':  [0, 0, 0, weight, 0],
+        'up':    [1, 0, 0, 0, 0],
+        'left':  [0, 1, 0, 0, 0],
+        'right': [0, 0, 1, 0, 0],
+        'down':  [0, 0, 0, 1, 0],
     }
-    return actions.get(snake.SnakeDirection, [0, 0, 0, 0, weight])
+    return actions.get(snake.SnakeDirection, [0, 0, 0, 0, 1])
 
 
-def draw_manual_overlay(screen, font, sample_count, last_action, last_label):
+def draw_manual_overlay(screen, font, sample_count, last_action, last_label, last_weight):
     """
     Purpose
         Draw a live overlay showing the training data being collected.
@@ -37,12 +49,13 @@ def draw_manual_overlay(screen, font, sample_count, last_action, last_label):
         screen, pygame.Surface: the game screen (the grid input the model sees)
         font, pygame.font.Font: font used for the overlay text
         sample_count, int: number of samples collected so far
-        last_action, list: most recently recorded action vector (output)
-        last_label, str: human readable label of the last action
+        last_action, list: most recently recorded one-hot action (output)
+        last_label, str: human readable label of the last action (output)
+        last_weight, float: importance weight of the last recorded sample
     """
     lines = [
         "MANUAL MODE - move with W/A/S/D, close window to save",
-        f"output: {last_label} {[round(a, 2) for a in last_action]}",
+        f"output: {last_label} {last_action} (weight {round(last_weight, 2)})",
         f"samples collected: {sample_count}",
     ]
     for i, line in enumerate(lines):
@@ -62,18 +75,18 @@ def simple_algorithm(snake,food):
     """
     if snake.SnakeDirection != "up" and snake.SnakeDirection != "down" and snake.SnakeHead.top >= food.FoodRect.bottom:
         snake.set_direction('up')
-        action = [(snake.SnakeLength+1)**0.5*1, 0, 0, 0, 0]
+        action = [1, 0, 0, 0, 0]
     elif snake.SnakeDirection != "left" and snake.SnakeDirection != "right" and snake.SnakeHead.left >= food.FoodRect.right:
         snake.set_direction('left')
-        action = [0, (snake.SnakeLength+1)**0.5*1, 0, 0, 0]
+        action = [0, 1, 0, 0, 0]
     elif snake.SnakeDirection != "right" and snake.SnakeDirection != "left" and snake.SnakeHead.right <= food.FoodRect.left:
         snake.set_direction('right')
-        action = [0, 0, (snake.SnakeLength+1)**0.5*1, 0, 0]
+        action = [0, 0, 1, 0, 0]
     elif snake.SnakeDirection != "down" and snake.SnakeDirection != "up" and snake.SnakeHead.bottom <= food.FoodRect.top:
         snake.set_direction('down')
-        action = [0, 0, 0, (snake.SnakeLength+1)**0.5*1,0]
+        action = [0, 0, 0, 1, 0]
     else:
-        action = [0,0,0,0,(snake.SnakeLength+1)**0.5*1]
+        action = [0, 0, 0, 0, 1]
 
     return action
 
@@ -130,7 +143,7 @@ def start_snake(snake,food,ScreenWide,ScreenHeight,FontType,SnakeStartX, SnakeSt
             if snake.SnakeAlive:
                 grid = create_grid(snake, food, ScreenWide, SnakeWide, ScreenHeight, SnakeHeight, FoodWide, FoodHeight)
                 action = simple_algorithm(snake, food)
-                game_memory.append([grid, action])
+                game_memory.append([grid, action, sample_weight(snake)])
             # disable tick for speedy testing
             #pygame.time.Clock().tick(snake.SnakeSpeed)
         else:
@@ -169,7 +182,7 @@ def collect_manual_training_data(snake, food, ScreenWide, ScreenHeight, FontType
         ScreenWide, ScreenHeight, FontType, SnakeStartX, SnakeStartY,
         SnakeWide, SnakeHeight, FoodWide, FoodHeight: game settings
     Output
-        training_data, list: collected [grid, action] samples
+        training_data, list: collected [grid, action, weight] samples
     """
     game_memory = []
     training_data = []
@@ -184,8 +197,9 @@ def collect_manual_training_data(snake, food, ScreenWide, ScreenHeight, FontType
     # Title
     pygame.display.set_caption('Snake - manual training data collection')
 
-    last_action = [0, 0, 0, 0, 0]
     last_label = "-"
+    last_weight = 0.0
+    last_action = [0, 0, 0, 0, 0]
 
     # Game Loop
     running = True
@@ -220,12 +234,14 @@ def collect_manual_training_data(snake, food, ScreenWide, ScreenHeight, FontType
             if snake.SnakeAlive:
                 grid = create_grid(snake, food, ScreenWide, SnakeWide, ScreenHeight, SnakeHeight, FoodWide, FoodHeight)
                 action = direction_to_action(snake)
-                game_memory.append([grid, action])
-                last_action = action
+                weight = sample_weight(snake)
+                game_memory.append([grid, action, weight])
                 last_label = ACTION_LABELS[int(numpy.argmax(action))]
+                last_weight = weight
+                last_action = action
                 sample_count = len(training_data) + len(game_memory)
                 # live console feedback of the sample being added
-                print(f"sample {sample_count}: output={last_label} {[round(a, 2) for a in action]}")
+                print(f"sample {sample_count}: output={last_label} {action} weight={round(weight, 2)}")
             # keep a playable speed so a human can control the snake
             pygame.time.Clock().tick(snake.SnakeSpeed)
         else:
@@ -237,7 +253,7 @@ def collect_manual_training_data(snake, food, ScreenWide, ScreenHeight, FontType
             snake = Snake(SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight)
             food = Food(ScreenWide, ScreenHeight, FoodWide, FoodHeight, SnakeWide, SnakeHeight)
 
-        draw_manual_overlay(screen, info_font, len(training_data) + len(game_memory), last_action, last_label)
+        draw_manual_overlay(screen, info_font, len(training_data) + len(game_memory), last_action, last_label, last_weight)
         pygame.display.update()
 
     # keep whatever was collected in the final (unfinished) run
@@ -264,7 +280,7 @@ if __name__ == "__main__":
     FoodHeight = 40
     FontType = "comicsansms"
     ScoreRequirement = 10
-    TrainingPeriod = 1000
+    TrainingPeriod = 10000
 
 
     if ScreenWide % SnakeWide != 0 or ScreenHeight % SnakeHeight != 0:
