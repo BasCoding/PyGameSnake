@@ -1,7 +1,6 @@
 import os
 import argparse
 import numpy as np
-import time
 import pygame
 from pygamesnake.game.snake import Snake, Food
 from pygamesnake.machine_learning.grid import create_grid
@@ -29,7 +28,7 @@ def execute_action(snake, action):
     # action 4 is do nothing
 
 
-def start_snake(model,model_name,snake,food):
+def start_snake(model,model_name,snake,food,normal_speed=False):
     # initialize pygame (skip audio, we never use sound)
     pygame.display.init()
     # font = pygame.font.SysFont("comicsansms", 72)
@@ -42,6 +41,7 @@ def start_snake(model,model_name,snake,food):
     scores = []
     time_kills = 0
     run = 0
+    steps_since_food = 0
 
     # Game Loop
     running = True
@@ -78,16 +78,20 @@ def start_snake(model,model_name,snake,food):
                 action = np.argmax(model.predict(grid.reshape(-1,15,20)))
                 execute_action(snake, action)
 
-            # disable tick for speedy testing
-            #pygame.time.Clock().tick(snake.SnakeSpeed)
+            # render at playable speed when requested, otherwise run as fast as possible
+            if normal_speed:
+                pygame.time.Clock().tick(snake.SnakeSpeed)
 
-            # requirement to get the food in time
-            if time.time() - food.FoodStart > time_req:
+            # requirement to get the food in time, counted in game steps so it is
+            # independent of the frame rate (fast vs --normal-speed)
+            steps_since_food = 0 if food.FoodEaten else steps_since_food + 1
+            if steps_since_food > max_steps_without_food:
                 snake.SnakeAlive = False
                 time_kills += 1
         else:
             scores.append(snake.SnakeLength)
             run += 1
+            steps_since_food = 0
             # reset memory and snake until end of training period
             if run < testing_period:
                 snake = Snake(SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight)
@@ -100,18 +104,19 @@ def start_snake(model,model_name,snake,food):
         pygame.display.update()
 
 
-def test_model(model_name,input_size):
+def test_model(model_name,input_size,normal_speed=False):
     model = neural_network_model(input_size)
     model.load(model_name)
     snake = Snake(SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight)
     food = Food(ScreenWide, ScreenHeight, FoodWide, FoodHeight, SnakeWide, SnakeHeight)
-    start_snake(model,model_name,snake,food)
+    start_snake(model,model_name,snake,food,normal_speed)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test a trained snake model')
     parser.add_argument('model_version', help='Name of the model version to test (e.g. trained_model_head_5)')
+    parser.add_argument('--normal-speed', action='store_true', help='Watch the game at normal playable speed instead of running as fast as possible')
     args = parser.parse_args()
 
     # Settings
@@ -124,7 +129,7 @@ if __name__ == "__main__":
     FoodWide = 40
     FoodHeight = 40
     testing_period = 100
-    time_req = 2.5  # in seconds
+    max_steps_without_food = 60  # game steps allowed to reach the next food
     LR = 1e-3
 
     if ScreenWide % SnakeWide != 0 or ScreenHeight % SnakeHeight != 0:
@@ -136,4 +141,4 @@ if __name__ == "__main__":
     X = np.array([i[0] for i in training_data])
     input_size = X[0].size
 
-    test_model(args.model_version, input_size)
+    test_model(args.model_version, input_size, args.normal_speed)

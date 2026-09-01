@@ -30,12 +30,12 @@ if __name__ == "__main__":
 
     LR = 1e-3
     epochs = 5
-    data_path = os.path.join('data', 'training_data_algorithm.npy')
+    data_path = os.path.join('data', 'training_data_manual.npy')
     print(f"loading training data from {data_path}")
     training_data = np.load(data_path, allow_pickle=True)
 
     model = train_model(training_data, epochs, LR)
     os.makedirs('models', exist_ok=True)
-    save_path = os.path.join('models', f'trained_model_algorithm_{epochs}')
+    save_path = os.path.join('models', f'trained_model_manual_{epochs}')
     model.save(save_path)
     print(f"saved model to {save_path}")
