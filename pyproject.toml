@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "pygamesnake"
-version = "0.1.0"
+version = "1.1.0"
 description = "Snake game build in python"
 authors = ["BasCoding <basvanderlaan96@hotmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "~3.13.5"
 pygame = "^2.6.0"
 tensorflow = "^2.17.0"
 tflearn = "^0.5.0"
