@@ -5,36 +5,32 @@ import pygame
 from pygamesnake.game.snake import Snake, Food
 from pygamesnake.machine_learning.grid import create_grid
 from pygamesnake.machine_learning.model import neural_network_model
-from pygamesnake.machine_learning.directkeys import PressKey, ReleaseKey, W, A, S, D
 
 
-def execute_action(action):
+def execute_action(snake, action):
     """
     Purpose
         Exexute the action predicted by the model
     Input
+        snake, Class: Snake
         action,int: action to be performed
     Output
 
     """
     if action == 0:
-        PressKey(W)
-        ReleaseKey(W)
+        snake.set_direction('up')
     elif action == 1:
-        PressKey(A)
-        ReleaseKey(A)
+        snake.set_direction('left')
     elif action == 2:
-        PressKey(D)
-        ReleaseKey(D)
+        snake.set_direction('right')
     elif action == 3:
-        PressKey(S)
-        ReleaseKey(S)
+        snake.set_direction('down')
     # action 4 is do nothing
 
 
 def start_snake(model,model_name,snake,food):
-    # initialize the pygame
-    pygame.init()
+    # initialize pygame (skip audio, we never use sound)
+    pygame.display.init()
     # font = pygame.font.SysFont("comicsansms", 72)
     screen = pygame.display.set_mode((ScreenWide, ScreenHeight))
 
@@ -79,7 +75,7 @@ def start_snake(model,model_name,snake,food):
             if snake.SnakeAlive:
                 grid = create_grid(snake, food, ScreenWide, SnakeWide, ScreenHeight, SnakeHeight, FoodWide, FoodHeight)
                 action = np.argmax(model.predict(grid.reshape(-1,15,20)))
-                execute_action(action)
+                execute_action(snake, action)
 
             # disable tick for speedy testing
             #pygame.time.Clock().tick(snake.SnakeSpeed)

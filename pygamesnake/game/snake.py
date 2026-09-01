@@ -84,6 +84,8 @@ class Snake:
 
 class Food():
     def __init__(self,ScreenWide,ScreenHeight,FoodWide,FoodHeight,SnakeWide,SnakeHeight):
+        self.FoodWide = FoodWide
+        self.FoodHeight = FoodHeight
         self.FoodRect = pygame.Rect(round_food((numpy.random.random() * 0.95*ScreenWide),SnakeWide),
                                                round_food((numpy.random.random() * 0.95* ScreenHeight),SnakeHeight),FoodWide,FoodHeight)
         self.FoodColor = (255,255,0) #yellow
@@ -96,7 +98,7 @@ class Food():
     def move(self,ScreenWide,ScreenHeight,SnakeWide,SnakeHeight):
         if self.FoodEaten == True:
             self.FoodRect = pygame.Rect(round_food((numpy.random.random() * 0.95*ScreenWide),SnakeWide),
-                                        round_food((numpy.random.random() * 0.95* ScreenHeight),SnakeHeight),FoodWide,FoodHeight)
+                                        round_food((numpy.random.random() * 0.95* ScreenHeight),SnakeHeight),self.FoodWide,self.FoodHeight)
             self.FoodStart = time.time()
 
     def check_eaten(self,SnakeHead):
@@ -107,8 +109,9 @@ class Food():
 
 
 def start_snake(ScreenWide,ScreenHeight,FontType,SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight,FoodWide, FoodHeight):
-    # initialize the pygame
-    pygame.init()
+    # initialize pygame (skip audio, we never use sound)
+    pygame.display.init()
+    pygame.font.init()
     font = pygame.font.SysFont(FontType, 72)
     screen = pygame.display.set_mode((ScreenWide, ScreenHeight))
 

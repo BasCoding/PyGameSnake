@@ -1,9 +1,9 @@
 import os
 import pygame
 import numpy
+from tqdm import tqdm
 from pygamesnake.game.snake import Snake, Food
 from pygamesnake.machine_learning.grid import create_grid
-from pygamesnake.machine_learning.directkeys import PressKey, ReleaseKey, W, A, S, D
 
 def simple_algorithm(snake,food):
     """
@@ -16,20 +16,16 @@ def simple_algorithm(snake,food):
         action,
     """
     if snake.SnakeDirection != "up" and snake.SnakeDirection != "down" and snake.SnakeHead.top >= food.FoodRect.bottom:
-        PressKey(W)
-        ReleaseKey(W)
+        snake.set_direction('up')
         action = [(snake.SnakeLength+1)**0.5*1, 0, 0, 0, 0]
     elif snake.SnakeDirection != "left" and snake.SnakeDirection != "right" and snake.SnakeHead.left >= food.FoodRect.right:
-        PressKey(A)
-        ReleaseKey(A)
+        snake.set_direction('left')
         action = [0, (snake.SnakeLength+1)**0.5*1, 0, 0, 0]
     elif snake.SnakeDirection != "right" and snake.SnakeDirection != "left" and snake.SnakeHead.right <= food.FoodRect.left:
-        PressKey(D)
-        ReleaseKey(D)
+        snake.set_direction('right')
         action = [0, 0, (snake.SnakeLength+1)**0.5*1, 0, 0]
     elif snake.SnakeDirection != "down" and snake.SnakeDirection != "up" and snake.SnakeHead.bottom <= food.FoodRect.top:
-        PressKey(S)
-        ReleaseKey(S)
+        snake.set_direction('down')
         action = [0, 0, 0, (snake.SnakeLength+1)**0.5*1,0]
     else:
         action = [0,0,0,0,(snake.SnakeLength+1)**0.5*1]
@@ -44,13 +40,17 @@ def start_snake(snake,food,ScreenWide,ScreenHeight,FontType,SnakeStartX, SnakeSt
     training_data = []
     scores = []
 
-    # initialize the pygame
-    pygame.init()
+    # initialize pygame (skip audio, we never use sound)
+    pygame.display.init()
+    pygame.font.init()
     font = pygame.font.SysFont(FontType, 72)
     screen = pygame.display.set_mode((ScreenWide, ScreenHeight))
 
     # Title
     pygame.display.set_caption('Snake')
+
+    # progress bar over the qualifying runs collected
+    progress = tqdm(total=TrainingPeriod, desc='Collecting training data', unit='run')
 
     # Game Loop
     running = True
@@ -95,6 +95,7 @@ def start_snake(snake,food,ScreenWide,ScreenHeight,FontType,SnakeStartX, SnakeSt
                 for data in game_memory:
                     training_data.append(data)
                 scores.append(snake.SnakeLength)
+                progress.update(1)
 
             # reset memory and snake until end of training period
             if run < TrainingPeriod:
@@ -102,6 +103,7 @@ def start_snake(snake,food,ScreenWide,ScreenHeight,FontType,SnakeStartX, SnakeSt
                 snake = Snake(SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight)
                 food = Food(ScreenWide, ScreenHeight, FoodWide, FoodHeight, SnakeWide, SnakeHeight)
             else:
+                progress.close()
                 print("average score of simple algorithm: ", numpy.mean(scores))
                 running = False
 
@@ -135,4 +137,5 @@ if __name__ == "__main__":
     training_data = start_snake(snake,food,ScreenWide,ScreenHeight,FontType,SnakeStartX, SnakeStartY, SnakeWide, SnakeHeight,FoodWide, FoodHeight,ScoreRequirement,TrainingPeriod)
 
     training_data_save = numpy.array(training_data, dtype=object)
+    os.makedirs('data', exist_ok=True)
     numpy.save(os.path.join('data','training_data.npy'), training_data_save)

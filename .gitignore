@@ -1,3 +1,7 @@
 .venv/
 models/
 data/
+
+# Python cache
+__pycache__/
+*.py[cod]
