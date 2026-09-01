@@ -1,3 +1,4 @@
+import time
 import pygame
 import numpy
 
@@ -87,6 +88,7 @@ class Food():
                                                round_food((numpy.random.random() * 0.95* ScreenHeight),SnakeHeight),FoodWide,FoodHeight)
         self.FoodColor = (255,255,0) #yellow
         self.FoodEaten = False
+        self.FoodStart = time.time() #to measure how long it is taking to find the food
 
     def render(self,screen):
         pygame.draw.rect(screen, self.FoodColor, self.FoodRect)
@@ -95,6 +97,7 @@ class Food():
         if self.FoodEaten == True:
             self.FoodRect = pygame.Rect(round_food((numpy.random.random() * 0.95*ScreenWide),SnakeWide),
                                         round_food((numpy.random.random() * 0.95* ScreenHeight),SnakeHeight),FoodWide,FoodHeight)
+            self.FoodStart = time.time()
 
     def check_eaten(self,SnakeHead):
         if SnakeHead.colliderect(self.FoodRect):
